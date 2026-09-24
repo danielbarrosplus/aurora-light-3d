@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadeira de Rodas Elétrica Aurora — Visualização 3D</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --accent: #0d9488;
+            --bg-light: #f8fafc;
+        }
+        body { background: var(--bg-light); }
+        .navbar { background: linear-gradient(90deg, var(--primary) 70%, var(--accent) 100%); }
+        .navbar-brand { color: white !important; font-weight: 700; }
+        .section { background: white; border-radius: 1.5rem; box-shadow: 0 4px 24px rgba(37,99,235,0.08); margin: 1.5rem 0; padding: 2rem; }
+        .section-title { color: var(--primary); font-weight: 600; margin-bottom: 1rem; }
+        .section-title::after { content: ''; display: block; width: 60px; height: 3px; background: var(--accent); margin: 6px 0 0 0; border-radius: 2px; }
+        .threejs-container { background: #eef2f7; border-radius: 1rem; padding: 1.5rem; min-height: 320px; box-shadow: 0 2px 12px rgba(37,99,235,0.08); }
+        .fallback-img { max-width: 100%; height: auto; border-radius: 0.75rem; box-shadow: 0 2px 8px rgba(37,99,235,0.08); display: block; margin: 0 auto; }
+        .fallback-gallery { display: flex; gap: 0.5rem; justify-content: center; margin: 1rem 0; }
+        .fallback-thumb { width: 52px; height: 38px; border-radius: 0.3rem; border: 2px solid #e0e7ff; cursor: pointer; object-fit: cover; transition: border-color 0.2s; }
+        .fallback-thumb.active { border-color: #2563eb; border-width: 3px; }
+        .animation-label { text-align: center; color: #64748b; font-size: 0.95rem; margin-top: 0.5rem; }
+        .btn-aurora { background: linear-gradient(90deg, #2563eb 70%, #1e40af 100%); color: white; border: none; font-weight: 600; padding: 0.6rem 1.8rem; border-radius: 0.75rem; }
+        .btn-aurora:hover { transform: translateY(-2px) scale(1.03); }
+        .info-box { background: #e0e7ff; color: #1e293b; border-left: 4px solid var(--accent); border-radius: 0.5rem; padding: 1rem; margin: 1.2rem 0; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="#"><i class="fa-solid fa-wheelchair"></i> Aurora Light</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#3dview">Visualização 3D</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#cost">Custo</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="container py-4">
+            <span class="badge bg-primary"><i class="fa-solid fa-bolt"></i> Projeto de Baixo Custo</span>
+            <h1>Cadeira de Rodas Elétrica <span class="text-success">Aurora Light</span></h1>
+            <p class="lead">Projeto open-source para serralheiros. Custo estimado: <strong>R\$ 2.350 – R\$ 3.200</strong></p>
+        </div>
+    </section>
+
+    <div class="container">
+        <!-- 3D View Section -->
+        <section id="3dview" class="section">
+            <h2 class="section-title"><i class="fa-solid fa-cube"></i> Visualização 3D</h2>
+            
+            <!-- Fallback Gallery (always visible as reference) -->
+            <div id="fallback-gallery" class="fallback-gallery" style="display:none;">
+                <img src="https://i.imgur.com/8Km9tVL.png" class="fallback-thumb active" data-angle="0" alt="Frente">
+                <img src="https://i.imgur.com/1zQJhGK.png" class="fallback-thumb" data-angle="45" alt="45°">
+                <img src="https://i.imgur.com/3sLwRqM.png" class="fallback-thumb" data-angle="90" alt="Lateral">
+                <img src="https://i.imgur.com/5GpXwzV.png" class="fallback-thumb" data-angle="135" alt="135°">
+                <img src="https://i.imgur.com/7YkRfNq.png" class="fallback-thumb" data-angle="180" alt="Traseira">
+            </div>
+            
+            <!-- Main 3D Canvas or Fallback Image -->
+            <div class="text-center my-3">
+                <div id="wheelchair-canvas" style="min-height:300px; display:flex;align-items:center;justify-content:center;">
+                    <!-- Three.js canvas ou fallback vai aqui -->
+                    <div id="threejs-status" style="color:#64748b;">
+                        <i class="fa-solid fa-spinner fa-spin" style="font-size:2.5rem;color:#2563eb;"></i>
+                        <div class="mt-2">Carregando visualização 3D...</div>
+                    </div>
+                </div>
+                
+                <!-- Fallback main image (shown if WebGL fails) -->
+                <img id="fallback-main" class="fallback-img" src="https://i.imgur.com/8Km9tVL.png" 
+                     alt="Cadeira de rodas elétrica - vista frontal" style="display:none;">
+            </div>
+            
+            <div class="animation-label">
+                <i class="fa-solid fa-info-circle"></i>
+                <span id="interaction-hint">Arraste com o mouse para girar • Use a roda para zoom</span>
+            </div>
+            
+            <div class="d-flex flex-wrap justify-content-center gap-2 mt-3" id="animation-controls">
+                <button class="btn btn-outline-primary btn-sm" data-view="front">Frente</button>
+                <button class="btn btn-outline-primary btn-sm" data-view="side">Lateral</button>
+                <button class="btn btn-outline-primary btn-sm" data-view="top">Topo</button>
+                <button class="btn btn-outline-success btn-sm" data-anim="assembly">Montagem</button>
+                <button class="btn btn-outline-danger btn-sm" data-anim="disassembly">Desmontagem</button>
+            </div>
+            
+            <div class="info-box mt-4" id="webgl-warning" style="display:none;">
+                <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i>
+                <strong>WebGL não detectado</strong>
+                <p class="mb-0" style="font-size:0.98rem;">
+                    Não foi possível inicializar a visualização 3D. Isso geralmente acontece quando:
+                    <ul>
+                        <li>Você abriu o arquivo localmente (<code>file://</code>). Abra via servidor web (<code>http://</code>).
+                        <li>Seu navegador tem extensões de segurança bloqueando WebGL.
+                        <li>Seu dispositivo é muito antigo.
+                    </ul>
+                    <strong>Solução rápida:</strong> Carregue este arquivo no <a href="https://replit.com/~" target="_blank">Replit</a>, <a href="https://glitch.com/" target="_blank">Glitch</a> ou em um servidor local (<code>python -m http.server</code>).
+                    <br><br>
+                    <em>Enquanto isso, use a <strong>galeria de imagens abaixo</strong> para visualizar a cadeira em diferentes ângulos.</em>
+                </p>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bootstrap -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Three.js CDN (latest stable) -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.155.0/examples/js/controls/OrbitControls.min.js"></script>
+    
+    <script>
+    // =========== VISUALIZADOR 3D COM FALLBACK AUTOMÁTICO ===========
+    document.addEventListener('DOMContentLoaded', function() {
+        const canvasDiv = document.getElementById('wheelchair-canvas');
+        const statusDiv = document.getElementById('threejs-status');
+        const webglWarning = document.getElementById('webgl-warning');
+        const fallbackMain = document.getElementById('fallback-main');
+        const fallbackGallery = document.getElementById('fallback-gallery');
+        const interactionHint = document.getElementById('interaction-hint');
+        
+        // --- 1. Verificação de WebGL robusta ---
+        function webglAvailable() {
+            try {
+                // Método 1: canvas.getContext
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) return true;
+                
+                // Método 2: WebGLRenderingContext existe
+                if (typeof WebGLRenderingContext !== 'undefined') return false;
+                
+                // Método 3: try WebGL2
+                if (canvas.getContext) {
+                    try {
+                        const gl2 = canvas.getContext('webgl2');
+                        if (gl2) return true;
+                    } catch (e) {}
+                }
+                return false;
+            } catch (e) { return false; }
+        }
+        
+        // --- 2. Variáveis de estado ---
+        let renderer, camera, scene, controls, wheelchair;
+        let animFrame = null, animating = false;
+        let canvasReady = false;
+        let currentFallbackAngle = 0;
+        
+        // URLs das imagens de fallback (5 ângulos)
+        const fallbackAngles = [
+            { angle: 0,   src: "https://i.imgur.com/8Km9tVL.png", label: "Frente" },
+            { angle: 45,  src: "https://i.imgur.com/1zQJhGK.png", label: "45°" },
+            { angle: 90,  src: "https://i.imgur.com/3sLwRqM.png", label: "Lateral" },
+            { angle: 135, src: "https://i.imgur.com/5GpXwzV.png", label: "135°" },
+            { angle: 180, src: "https://i.imgur.com/7YkRfNq.png", label: "Traseira" }
+        ];
+
+        // --- 3. Fallback: galeria de imagens ---
+        function initFallback() {
+            // Mostrar fallback
+            statusDiv.style.display = 'none';
+            fallbackMain.style.display = 'block';
+            fallbackGallery.style.display = 'flex';
+            webglWarning.style.display = 'block';
+            interactionHint.textContent = "Clique nas miniaturas abaixo para trocar o ângulo de visualização";
+            
+            // Ativar primeira imagem
+            fallbackMain.src = fallbackAngles[currentFallbackAngle].src;
+            fallbackMain.alt = "Cadeira - " + fallbackAngles[currentFallbackAngle].label;
+            
+            // Event listeners na galeria
+            const thumbs = fallbackGallery.querySelectorAll('.fallback-thumb');
+            thumbs.forEach((thumb, idx) => {
+                thumb.addEventListener('click', () => {
+                    currentFallbackAngle = idx;
+                    thumbs.forEach(t => t.classList.remove('active'));
+                    thumb.classList.add('active');
+                    fallbackMain.src = fallbackAngles[idx].src;
+                    fallbackMain.alt = "Cadeira - " + fallbackAngles[idx].label;
+                });
+            });
+            
+            // Desabilitar controles de animação 3D
+            document.querySelectorAll('#animation-controls button').forEach(b => {
+                b.disabled = true;
+            });
+        }
+
+        // --- 4. Criação da cena Three.js ---
+        function createScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color('#eef2f7');
+            
+            // Luz ambiente + direcional
+            scene.add(new THREE.AmbientLight(0xffffff, 0.8));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.55);
+            dirLight.position.set(2, 4, 3);
+            scene.add(dirLight);
+        }
+
+        function createWheelchairModel() {
+            const group = new THREE.Group();
+            
+            // Materiais
+            const matChassi = new THREE.MeshPhongMaterial({color: 0x2563eb, shininess: 60});
+            const matBraço = new THREE.MeshPhongMaterial({color: 0x0d9488, shininess: 50});
+            const matAssento = new THREE.MeshPhongMaterial({color: 0x6366f1, shininess: 35});
+            const matRodas = new THREE.MeshPhongMaterial({color: 0x334155, shininess: 70});
+            const matMotor = new THREE.MeshPhongMaterial({color: 0xdc2626, shininess: 65});
+            const matBatt = new THREE.MeshPhongMaterial({color: 0x94a3b8, shininess: 25});
+            const matConsole = new THREE.MeshPhongMaterial({color: 0xf59e0b, shininess: 45});
+            
+            // Base longarinas
+            const base1 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.04), matChassi.clone());
+            base1.position.set(0, 0.02, 0.275);
+            const base2 = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.04, 0.04), matChassi.clone());
+            base2.position.set(0, 0.02, -0.275);
+            
+            // Transversais
+            const cross = [];
+            for (let i = 0; i < 3; i++) {
+                const c = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.04, 0.55), matChassi.clone());
+                c.rotation.z = Math.PI/2;
+                cross.push(c);
+            }
+            cross[0].position.set(0.35, 0.02, 0);
+            cross[1].position.set(-0.25, 0.02, 0);
+            cross[2].position.set(-0.75, 0.02, 0);
+            
+            // Colunas (traseiras 3cm mais altas)
+            const cols = [];
+            for (let i = 0; i < 4; i++) {
+                const c = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.40, 0.04), matChassi.clone());
+                c.position.set(
+                    i < 2 ? 0.35 : -0.75,
+                    0.22 + (i >= 2 ? 0.03 : 0),
+                    i % 2 == 0 ? 0.45 : -0.45
+                );
+                cols.push(c);
+            }
+            
+            // Assento
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(0.50, 0.03, 0.60), matAssento);
+            seat.position.set(-0.125, 0.42, 0);
+            
+            // Braços (posição subida)
+            const armGeom = new THREE.BoxGeometry(0.03, 0.48, 0.05);
+            const armL = new THREE.Mesh(armGeom, matBraço.clone());
+            armL.position.set(0.25, 0.65, 0.32);
+            armL.rotation.x = -0.15;
+            const armR = new THREE.Mesh(armGeom, matBraço.clone());
+            armR.position.set(0.25, 0.65, -0.32);
+            armR.rotation.x = -0.15;
+            
+            // Braços (posição descida - ocultos inicialmente)
+            const armL_down = new THREE.Mesh(armGeom, matBraço.clone());
+            armL_down.position.set(0.25, 0.38, 0.32);
+            armL_down.rotation.x = -1.3;
+            armL_down.visible = false;
+            const armR_down = new THREE.Mesh(armGeom, matBraço.clone());
+            armR_down.position.set(0.25, 0.38, -0.32);
+            armR_down.rotation.x = -1.3;
+            armR_down.visible = false;
+            
+            // Rodas traseiras
+            const wheelL = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.06, 32), matRodas.clone());
+            wheelL.position.set(-0.75, 0.06, 0.45);
+            const wheelR = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.06, 32), matRodas.clone());
+            wheelR.position.set(-0.75, 0.06, -0.45);
+            
+            // Rodinhas dianteiras
+            const casterFL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), matRodas.clone());
+            casterFL.position.set(0.35, 0.08, 0.45);
+            const casterFR = new THREE.Mesh(new THREE.SphereGeometry(0.08, 16, 16), matRodas.clone());
+            casterFR.position.set(0.35, 0.08, -0.45);
+            
+            // Motor central
+            const motor = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.14, 0.22), matMotor);
+            motor.position.set(-0.25, 0.10, 0);
+            
+            // Bateria
+            const batt = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.28), matBatt);
+            batt.position.set(-0.65, 0.20, 0.25);
+            
+            // Console
+            const console = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.06, 0.18), matConsole);
+            console.position.set(0.42, 0.58, 0);
+            
+            // Encosto
+            const back = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.38, 0.03), matAssento.clone());
+            back.position.set(-0.56, 0.65, 0);
+            back.rotation.y = 0.18;
+            
+            // Cinto
+            const beltL = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.28, 0.02), new THREE.MeshPhongMaterial({color: 0xef4444, shininess: 10}));
+            beltL.position.set(-0.05, 0.42, 0.28);
+            beltL.rotation.z = 0.15;
+            const beltR = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.28, 0.02), new THREE.MeshPhongMaterial({color: 0xef4444, shininess: 10}));
+            beltR.position.set(0.05, 0.42, -0.28);
+            beltR.rotation.z = -0.15;
+            
+            // Adicionar ao grupo
+            group.add(base1, base2, ...cross, ...cols, seat, armL, armR, armL_down, armR_down, wheelL, wheelR, casterFL, casterFR, motor, batt, console, back, beltL, beltR);
+            group.userData.arms = { up: [armL, armR], down: [armL_down, armR_down] };
+            return group;
+        }
+
+        // --- 5. Animação e controle de câmera ---
+        const ANIM_STATES = { IDLE: 'idle', ASSEMBLY: 'assembly', DISASSEMBLY: 'disassembly' };
+        let animationState = ANIM_STATES.IDLE;
+        let animElapsed = 0;
+        
+        function setAnimationState(state) {
+            animationState = state;
+            animElapsed = 0;
+            if (state === ANIM_STATES.IDLE) {
+                controls.enabled = true;
+                // Garante que tudo está visível
+                wheelchair.traverse(child => { if (child.isMesh) child.visible = true; });
+                if (wheelchair.userData.arms) {
+                    wheelchair.userData.arms.up.forEach(a => a.visible = true);
+                    wheelchair.userData.arms.down.forEach(a => a.visible = false);
+                }
+            } else {
+                controls.enabled = false;
+            }
+        }
+        
+        function updateAnimation(delta) {
+            if (animationState === ANIM_STATES.IDLE) return;
+            
+            animElapsed += delta;
+            
+            if (animationState === ANIM_STATES.ASSEMBLY) {
+                if (animElapsed < 0.8) {
+                    // Base + crossbars
+                    wheelchair.children.forEach((child, i) => { child.visible = i < 7; });
+                } else if (animElapsed < 1.3) {
+                    // Colunas
+                    wheelchair.children.forEach((child, i) => { child.visible = i < 11; });
+                } else if (animElapsed < 1.8) {
+                    // Assento + rodas
+                    wheelchair.children.forEach((child, i) => { child.visible = i < 16; });
+                } else if (animElapsed < 2.4) {
+                    // Braços + motor + bateria + console + encosto + cinto
+                    wheelchair.children.forEach((child, i) => { child.visible = i < 22; });
+                    if (wheelchair.userData.arms) {
+                        wheelchair.userData.arms.up.forEach(a => a.visible = true);
+                        wheelchair.userData.arms.down.forEach(a => a.visible = false);
+                    }
+                } else {
+                    // Completo
+                    wheelchair.children.forEach(child => { if (child.isMesh) child.visible = true; });
+                    if (wheelchair.userData.arms) {
+                        wheelchair.userData.arms.up.forEach(a => a.visible = true);
+                        wheelchair.userData.arms.down.forEach(a => a.visible = false);
+                    }
+                    setAnimationState(ANIM_STATES.IDLE);
+                }
+                
+            } else if (animationState === ANIM_STATES.DISASSEMBLY) {
+                // Começa com tudo visível
+                if (animElapsed < 0.6) {
+                    // Console + bateria + motor
+                    wheelchair.children.forEach((child, i) => {
+                        child.visible = !(i === 16 || i === 17 || i === 18);
+                    });
+                } else if (animElapsed < 1.1) {
+                    // Assento + encosto
+                    wheelchair.children.forEach((child, i) => {
+                        child.visible = !(i === 9 || i === 19);
+                    });
+                    if (wheelchair.userData.arms) {
+                        wheelchair.userData.arms.up.forEach(a => a.visible = true);
+                        wheelchair.userData.arms.down.forEach(a => a.visible = false);
+                    }
+                } else if (animElapsed < 1.7) {
+                    // Braços dobram
+                    wheelchair.children.forEach((child, i) => { child.visible = true; });
+                    if (wheelchair.userData.arms) {
+                        wheelchair.userData.arms.up.forEach(a => a.visible = false);
+                        wheelchair.userData.arms.down.forEach(a => a.visible = true);
+                    }
+                } else if (animElapsed < 2.3) {
+                    // Rodas
+                    wheelchair.children.forEach((child, i) => {
+                        if (i >= 10 && i <= 13) child.visible = false;
+                        else child.visible = true;
+                    });
+                    if (wheelchair.userData.arms) {
+                        wheelchair.userData.arms.up.forEach(a => a.visible = false);
+                        wheelchair.userData.arms.down.forEach(a => a.visible = true);
+                    }
+                } else if (animElapsed < 2.9) {
+                    // Colunas
+                    wheelchair.children.forEach((child, i) => {
+                        if (i >= 5 && i <= 8) child.visible = false;
+                        else if (i >= 10 && i <= 13) child.visible = false;
+                        else child.visible = true;
+                    });
+                } else {
+                    // Só base
+                    wheelchair.children.forEach((child, i) => {
+                        child.visible = (i < 5);
+                    });
+                    setAnimationState(ANIM_STATES.IDLE);
+                }
+            }
+        }
+
+        // --- 6. Loop de renderização único ---
+        function renderLoop() {
+            animFrame = requestAnimationFrame(renderLoop);
+            
+            // Delta time
+            const now = performance.now();
+            const delta = Math.min((now - (renderLoop.lastTime || now)) / 1000, 0.1);
+            renderLoop.lastTime = now;
+            
+            // Animação
+            if (animationState !== ANIM_STATES.IDLE && wheelchair) {
+                updateAnimation(delta);
+            }
+            
+            // Render
+            if (renderer && camera && scene) {
+                renderer.render(scene, camera);
+            }
+            
+            // OrbitControls precisa de update se não estiver animando
+            if (animationState === ANIM_STATES.IDLE && controls) {
+                controls.update();
+            }
+        }
+
+        // --- 7. Inicialização Three.js ---
+        function initThreeJS() {
+            // Limpa status
+            statusDiv.innerHTML = '';
+            
+            // Cria renderer
+            const width = canvasDiv.offsetWidth || 420;
+            const height = 300;
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+            renderer.setSize(width, height);
+            renderer.setClearColor(0xeef2f7, 1);
+            
+            // Remove qualquer conteúdo anterior
+            canvasDiv.innerHTML = '';
+            canvasDiv.appendChild(renderer.domElement);
+            
+            // Cria cena e câmera
+            createScene();
+            camera = new THREE.PerspectiveCamera(45, width/height, 1, 1000);
+            camera.position.set(0, 1.2, 3.2);
+            camera.lookAt(0, 0.4, 0);
+            
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.12;
+            controls.rotateSpeed = -0.5;
+            controls.minDistance = 1.5;
+            controls.maxDistance = 5;
+            controls.enablePan = false;
+            
+            // Modelo
+            wheelchair = createWheelchairModel();
+            scene.add(wheelchair);
+            
+            // Resize
+            const resizeObserver = new ResizeObserver(entries => {
+                for (let entry of entries) {
+                    const w = entry.contentRect.width || 420;
+                    const h = entry.contentRect.height || 300;
+                    if (renderer) {
+                        renderer.setSize(w, h);
+                    }
+                    if (camera) {
+                        camera.aspect = w / h;
+                        camera.updateProjectionMatrix();
+                    }
+                }
+            });
+            resizeObserver.observe(canvasDiv);
+            
+            // Inicia loop
+            setAnimationState(ANIM_STATES.IDLE);
+            renderLoop();
+            
+            canvasReady = true;
+        }
+
+        // --- 8. Verificação final e fallback automático ---
+        function checkWebGLAndInit() {
+            // Testa WebGL com múltiplos métodos
+            let available = false;
+            try {
+                const canvas = document.createElement('canvas');
+                const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+                if (gl) available = true;
+                // Testa WebGL2
+                if (!available) {
+                    try {
+                        const gl2 = canvas.getContext('webgl2');
+                        if (gl2) available = true;
+                    } catch (e2) {}
+                }
+            } catch (e) { available = false; }
+            
+            if (available) {
+                // Tudo OK — inicializa Three.js
+                statusDiv.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size:2.5rem;color:#2563eb;"></i>
+                    <div class="mt-2">Carregando modelo 3D...</div>`;
+                // Pequeno delay para garantir DOM renderizado
+                setTimeout(() => {
+                    try {
+                        initThreeJS();
+                        statusDiv.style.display = 'none';
+                        fallbackMain.style.display = 'none';
+                        fallbackGallery.style.display = 'none';
+                        webglWarning.style.display = 'none';
+                    } catch (err) {
+                        console.error("Erro ao inicializar Three.js:", err);
+                        initFallback();
+                    }
+                }, 80);
+            } else {
+                // WebGL indisponível — fallback
+                initFallback();
+            }
+        }
+
+        // --- 9. Controles de câmera e animação ---
+        function setView(preset) {
+            if (!camera || !controls) return;
+            controls.enabled = false;
+            
+            switch(preset) {
+                case 'front':
+                    camera.position.set(0, 1.2, 3.2);
+                    camera.lookAt(0, 0.4, 0);
+                    break;
+                case 'side':
+                    camera.position.set(2.2, 1.2, 0);
+                    camera.lookAt(0, 0.4, 0);
+                    break;
+                case 'top':
+                    camera.position.set(0, 3.0, 0);
+                    camera.lookAt(0, 0.4, 0);
+                    break;
+            }
+            controls.update();
+            setTimeout(() => controls.enabled = true, 250);
+        }
+
+        // --- 10. Inicialização final ---
+        // Tenta inicializar após DOM carregado e com pequeno delay
+        setTimeout(() => {
+            // Verifica se o canvasDiv tem dimensões
+            if (canvasDiv.offsetWidth > 50 && canvasDiv.offsetHeight > 50) {
+                checkWebGLAndInit();
+            } else {
+                // Espera mais um pouco (layout pode não estar pronto)
+                setTimeout(checkWebGLAndInit, 400);
+            }
+        }, 100);
+
+        // Event listeners — controles de visualização
+        document.querySelectorAll('[data-view]').forEach(btn => {
+            btn.addEventListener('click', () => setView(btn.getAttribute('data-view')));
+        });
+        
+        document.querySelectorAll('[data-anim]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!wheelchair) return;
+                if (animationState !== ANIM_STATES.IDLE) return;
+                const anim = btn.getAttribute('data-anim');
+                if (anim === 'assembly') {
+                    setAnimationState(ANIM_STATES.ASSEMBLY);
+                } else if (anim === 'disassembly') {
+                    setAnimationState(ANIM_STATES.DISASSEMBLY);
+                }
+            });
+        });
+
+        // Limpa animação se a aba perder foco (performance)
+        window.addEventListener('blur', () => {
+            if (animFrame) {
+                cancelAnimationFrame(animFrame);
+                animFrame = null;
+            }
+        });
+        
+        // Recomeça se voltar a focar
+        window.addEventListener('focus', () => {
+            if (!animFrame && canvasReady) {
+                renderLoop();
+            }
+        });
+    });
+    </script>
+</body>
+</html>
